@@ -1,4 +1,4 @@
-package com.mbw.spring;
+package com.mbw.spring.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

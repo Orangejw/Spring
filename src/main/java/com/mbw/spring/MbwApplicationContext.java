@@ -1,12 +1,17 @@
 package com.mbw.spring;
 
+import com.mbw.spring.annotation.AutoWired;
+import com.mbw.spring.annotation.Component;
+import com.mbw.spring.annotation.ComponentScan;
+import com.mbw.spring.annotation.Scope;
+import com.mbw.spring.inter.BeanNameAware;
+import com.mbw.spring.inter.InitializingBean;
+
 import java.beans.Introspector;
 import java.io.File;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MbwApplicationContext {
@@ -96,9 +101,22 @@ public class MbwApplicationContext {
             for (Field f : clazz.getDeclaredFields()) {
                 if (f.isAnnotationPresent(AutoWired.class)) {
                     f.setAccessible(true);
-                    f.set(instance, getBean(f.getName()));
+                    f.set(instance, getBean(Introspector.decapitalize(f.getType().getSimpleName())));
                 }
             }
+
+            // Aware
+            if (instance instanceof BeanNameAware) {
+                ((BeanNameAware) instance).setName(beanName);
+            }
+
+            // 初始化
+            if (instance instanceof InitializingBean) {
+                ((InitializingBean) instance).afterPropertiesSet();
+            }
+
+            // 初始化后 AOP
+
 
             return instance;
         } catch (InstantiationException e) {
