@@ -1,9 +1,12 @@
 package com.mbw.spring;
 
+import java.beans.Introspector;
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MbwApplicationContext {
@@ -44,13 +47,16 @@ public class MbwApplicationContext {
                         String className = fileName.substring(fileName.indexOf(start), fileName.indexOf(".class"));
                         className = className.replace("\\", ".");
 
-                        System.out.println(className);
                         try {
                             Class<?> clazz = classLoader.loadClass(className);
 
                             if (clazz.isAnnotationPresent(Component.class)) {
                                 // Bean
                                 String beanName = clazz.getAnnotation(Component.class).value();
+
+                                if (beanName.equals("")) {
+                                    beanName = Introspector.decapitalize(clazz.getSimpleName());
+                                }
 
                                 BeanDefinition beanDefinition = BeanDefinition.builder()
                                         .type(clazz)
@@ -76,7 +82,6 @@ public class MbwApplicationContext {
             if (beanDefinition.getScope().equals("singleton")) {
                 Object bean = createBaen(beanName, beanDefinition);
                 singletonObjects.put(beanName, bean);
-
             }
         }
     }
@@ -86,6 +91,15 @@ public class MbwApplicationContext {
 
         try {
             Object instance = clazz.getConstructor().newInstance();
+
+            // 依赖注入
+            for (Field f : clazz.getDeclaredFields()) {
+                if (f.isAnnotationPresent(AutoWired.class)) {
+                    f.setAccessible(true);
+                    f.set(instance, getBean(f.getName()));
+                }
+            }
+
             return instance;
         } catch (InstantiationException e) {
             e.printStackTrace();

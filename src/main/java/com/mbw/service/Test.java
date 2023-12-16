@@ -7,12 +7,6 @@ public class Test {
         MbwApplicationContext mbwApplicationContext = new MbwApplicationContext(AppConfig.class);
 
         UserService userService = (UserService) mbwApplicationContext.getBean("userService");
-
-        System.out.println(mbwApplicationContext.getBean("userService"));
-        System.out.println(mbwApplicationContext.getBean("userService"));
-        System.out.println(mbwApplicationContext.getBean("userService"));
-        System.out.println(mbwApplicationContext.getBean("userService"));
-
-
+        userService.test();
     }
 }
