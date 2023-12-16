@@ -5,13 +5,17 @@ import com.mbw.spring.annotation.Component;
 import com.mbw.spring.annotation.ComponentScan;
 import com.mbw.spring.annotation.Scope;
 import com.mbw.spring.inter.BeanNameAware;
+import com.mbw.spring.inter.BeanPostProcessor;
 import com.mbw.spring.inter.InitializingBean;
 
+import javax.jws.Oneway;
 import java.beans.Introspector;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MbwApplicationContext {
@@ -21,6 +25,8 @@ public class MbwApplicationContext {
     private ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
 
     private ConcurrentHashMap<String, Object> singletonObjects = new ConcurrentHashMap<>();
+
+    private List<BeanPostProcessor> beanPostProcessorList = new ArrayList<>();
 
 
     public MbwApplicationContext(Class configClass) {
@@ -59,6 +65,11 @@ public class MbwApplicationContext {
                                 // Bean
                                 String beanName = clazz.getAnnotation(Component.class).value();
 
+                                if (BeanPostProcessor.class.isAssignableFrom(clazz)) {
+                                    BeanPostProcessor instance = (BeanPostProcessor) clazz.newInstance();
+                                    beanPostProcessorList.add(instance);
+                                }
+
                                 if (beanName.equals("")) {
                                     beanName = Introspector.decapitalize(clazz.getSimpleName());
                                 }
@@ -74,6 +85,10 @@ public class MbwApplicationContext {
 
                             }
                         } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        } catch (InstantiationException e) {
                             e.printStackTrace();
                         }
                     }
@@ -110,12 +125,17 @@ public class MbwApplicationContext {
                 ((BeanNameAware) instance).setName(beanName);
             }
 
+            beanPostProcessorList.stream()
+                    .forEach(beanPostProcessor -> beanPostProcessor.postProcessBeforeInitialization(beanName, instance));
+
             // 初始化
             if (instance instanceof InitializingBean) {
                 ((InitializingBean) instance).afterPropertiesSet();
             }
 
-            // 初始化后 AOP
+            // BeanPostProcessor 初始化后 AOP
+            beanPostProcessorList.stream()
+                    .forEach(beanPostProcessor -> beanPostProcessor.postProcessAfterInitialization(beanName, instance));
 
 
             return instance;
