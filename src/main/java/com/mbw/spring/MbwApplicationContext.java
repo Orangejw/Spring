@@ -2,6 +2,7 @@ package com.mbw.spring;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,6 +11,9 @@ public class MbwApplicationContext {
     private Class configClass;
 
     private ConcurrentHashMap<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>();
+
+    private ConcurrentHashMap<String, Object> singletonObjects = new ConcurrentHashMap<>();
+
 
     public MbwApplicationContext(Class configClass) {
         this.configClass = configClass;
@@ -46,7 +50,6 @@ public class MbwApplicationContext {
 
                             if (clazz.isAnnotationPresent(Component.class)) {
                                 // Bean
-
                                 String beanName = clazz.getAnnotation(Component.class).value();
 
                                 BeanDefinition beanDefinition = BeanDefinition.builder()
@@ -62,18 +65,60 @@ public class MbwApplicationContext {
                         } catch (ClassNotFoundException e) {
                             e.printStackTrace();
                         }
-
-
-
                     }
                 }
             }
-
         }
+        
+        // 创建单例Bean对象
+        for (String beanName : beanDefinitionMap.keySet()) {
+            BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+            if (beanDefinition.getScope().equals("singleton")) {
+                Object bean = createBaen(beanName, beanDefinition);
+                singletonObjects.put(beanName, bean);
+
+            }
+        }
+    }
+
+    private Object createBaen(String beanName, BeanDefinition beanDefinition) {
+        Class clazz = beanDefinition.getType();
+
+        try {
+            Object instance = clazz.getConstructor().newInstance();
+            return instance;
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     public Object getBean(String beanName) {
 
-        return null;
+        BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+
+        if (beanDefinition == null) {
+            throw new NullPointerException();
+        } else {
+            String scope = beanDefinition.getScope();
+            if (scope.equals("singleton")) {
+                Object bean = singletonObjects.get(beanName);
+                if (bean == null) {
+                    bean = createBaen(beanName, beanDefinition);
+                    singletonObjects.put(beanName, bean);
+                }
+                return bean;
+            } else {
+                // 多例
+                return createBaen(beanName, beanDefinition);
+            }
+        }
     }
 }

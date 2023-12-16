@@ -8,5 +8,11 @@ public class Test {
 
         UserService userService = (UserService) mbwApplicationContext.getBean("userService");
 
+        System.out.println(mbwApplicationContext.getBean("userService"));
+        System.out.println(mbwApplicationContext.getBean("userService"));
+        System.out.println(mbwApplicationContext.getBean("userService"));
+        System.out.println(mbwApplicationContext.getBean("userService"));
+
+
     }
 }
